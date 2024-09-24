@@ -1,37 +1,36 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 
+// Define a proper type for your user data
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
+
+// Modify the initial state to use this structure
 const initialState = {
-  token: "",
-  user: "",
+  accessToken: null,
+  refreshToken: null,
+  user: null as User | null, // Ensure user can be an object or null
 };
 
-const authSlice = createSlice({
-  name: "auth",
+// Update the reducer to handle an object for the user
+export const authSlice = createSlice({
+  name: 'auth',
   initialState,
   reducers: {
-    userRegistration: (state, action: PayloadAction<{ token: string }>) => {
-      state.token = action.payload.token;
-    },
-    userLoggedIn: (
-      state: any,
-      action: PayloadAction<{
-        accessToken: string;
-        user: string;
-        refreshToken: string;
-      }>
-    ) => {
-      state.token = action.payload.accessToken;
+    userLoggedIn: (state, action) => {
+      state.accessToken = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
-      state.user = action.payload.user;
+      state.user = action.payload.user; // Assign the user object here
     },
     userLoggedOut: (state) => {
-      state.token = "";
-      state.user = "";
+      state.accessToken = null;
+      state.refreshToken = null;
+      state.user = null;
     },
   },
 });
 
-export const { userRegistration, userLoggedIn, userLoggedOut } =
-  authSlice.actions;
-
+export const { userLoggedIn, userLoggedOut } = authSlice.actions;
 export default authSlice.reducer;
