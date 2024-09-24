@@ -15,22 +15,33 @@ const initialState = {
 };
 
 // Update the reducer to handle an object for the user
-export const authSlice = createSlice({
-  name: 'auth',
+const authSlice = createSlice({
+  name: "auth",
   initialState,
   reducers: {
-    userLoggedIn: (state, action) => {
-      state.accessToken = action.payload.accessToken;
+    userRegistration: (state, action: PayloadAction<{ token: string }>) => {
+      state.token = action.payload.token;
+    },
+    userLoggedIn: (
+      state: any,
+      action: PayloadAction<{
+        accessToken: string;
+        user: string;
+        refreshToken: string;
+      }>
+    ) => {
+      state.token = action.payload.accessToken;
       state.refreshToken = action.payload.refreshToken;
-      state.user = action.payload.user; // Assign the user object here
+      state.user = action.payload.user;
     },
     userLoggedOut: (state) => {
-      state.accessToken = null;
-      state.refreshToken = null;
-      state.user = null;
+      state.token = "";
+      state.user = "";
     },
   },
 });
 
-export const { userLoggedIn, userLoggedOut } = authSlice.actions;
+export const { userRegistration, userLoggedIn, userLoggedOut } =
+  authSlice.actions;
+
 export default authSlice.reducer;
