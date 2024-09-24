@@ -7,62 +7,56 @@ type RegistrationResponse = {
   activationToken: string;
 };
 
-type RegistrationData = {
-  email: string;
-  password: string;
-  name?: string;
-};
+type RegistrationData = {};
 
-// Authentication API with injected endpoints
 export const authApi = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    // Register mutation
+    // endpoints here
     register: builder.mutation<RegistrationResponse, RegistrationData>({
       query: (data) => ({
         url: "registration",
         method: "POST",
         body: data,
-        credentials: "include", // Include credentials (cookies) in request
+        credentials: "include" as const,
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const result = await queryFulfilled;
           dispatch(
             userRegistration({
-              token: result.data.activationToken, // Store activation token
+              token: result.data.activationToken,
             })
           );
         } catch (error: any) {
-          console.error("Registration Error:", error);
+          console.log(error);
         }
       },
     }),
-
-    // Activation mutation
     activation: builder.mutation({
       query: ({ activation_token, activation_code }) => ({
         url: "activate-user",
         method: "POST",
-        body: { activation_token, activation_code }, // Send activation token and code
+        body: {
+          activation_token,
+          activation_code,
+        },
       }),
     }),
-
-    // Login mutation
     login: builder.mutation({
-      query: ({ email, password }: { email: string; password: string }) => ({
+      query: ({ email, password }) => ({
         url: "login",
         method: "POST",
-        body: { email, password }, // Pass login credentials
-        credentials: "include", // Include credentials (cookies) in request
+        body: {
+          email,
+          password,
+        },
+        credentials: "include" as const,
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const result = await queryFulfilled;
-          // Store tokens in cookies
           Cookies.set("accessToken", result.data.accessToken);
           Cookies.set("refreshToken", result.data.refreshToken);
-
-          // Dispatch login action with user data
           dispatch(
             userLoggedIn({
               accessToken: result.data.accessToken,
@@ -71,65 +65,56 @@ export const authApi = apiSlice.injectEndpoints({
             })
           );
         } catch (error: any) {
-          console.error("Login Error:", error);
+          console.log(error);
         }
       },
     }),
-
-    // Social Authentication mutation
     socialAuth: builder.mutation({
-      query: ({ email, name, avatar }: { email: string; name: string; avatar?: string }) => ({
+      query: ({ email, name, avatar }) => ({
         url: "social-auth",
         method: "POST",
-        body: { email, name, avatar }, // Pass social auth data
-        credentials: "include", // Include credentials (cookies)
+        body: {
+          email,
+          name,
+          avatar,
+        },
+        credentials: "include" as const,
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const result = await queryFulfilled;
-          // Store tokens in cookies
           Cookies.set("accessToken", result.data.accessToken);
           Cookies.set("refreshToken", result.data.refreshToken);
 
-          // Dispatch login action with user data
           dispatch(
             userLoggedIn({
               accessToken: result.data.accessToken,
-              refreshToken: result.data.refreshToken,
               user: result.data.user,
+              refreshToken: result.data.refreshToken,
             })
           );
         } catch (error: any) {
-          console.error("Social Auth Error:", error);
+          console.log(error);
         }
       },
     }),
-
-    // Logout query
     logOut: builder.query({
       query: () => ({
         url: "logout",
         method: "GET",
-        credentials: "include", // Include credentials for logout
+        credentials: "include" as const,
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
-          await queryFulfilled;
-          // Clear tokens from cookies
-          Cookies.remove("accessToken");
-          Cookies.remove("refreshToken");
-
-          // Dispatch logout action
           dispatch(userLoggedOut());
         } catch (error: any) {
-          console.error("Logout Error:", error);
+          console.log(error);
         }
       },
     }),
   }),
 });
 
-// Export hooks for use in components
 export const {
   useRegisterMutation,
   useActivationMutation,
