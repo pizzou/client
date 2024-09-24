@@ -2,76 +2,89 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { userLoggedIn } from "../auth/authSlice";
 import Cookies from "js-cookie";
 
-// API slice for handling requests
+interface LoadUserResponse {
+  accessToken: string;
+  refreshToken: string;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    // Add other user fields as needed
+  };
+}
+
 export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_SERVER_URI, // Ensure the environment variable is set correctly
+    baseUrl: process.env.NEXT_PUBLIC_SERVER_URI,
     prepareHeaders: (headers) => {
-      // Get tokens from cookies
       const accessToken = Cookies.get("accessToken");
       const refreshToken = Cookies.get("refreshToken");
 
-      // Add Authorization header if access token exists
       if (accessToken) {
         headers.set("Authorization", `Bearer ${accessToken}`);
       }
-
-      // Add custom header for refresh token if it exists
       if (refreshToken) {
-        headers.set("x-refresh-token", refreshToken);
+        headers.set("x-refresh-token", refreshToken); // Custom header for refresh token
       }
 
-      // Set Content-Type to application/json
       headers.set("Content-Type", "application/json");
 
       return headers;
     },
-    credentials: "include", // Include credentials (like cookies) in cross-origin requests
+    credentials: "include", // Include credentials (cookies) in cross-origin requests
   }),
   endpoints: (builder) => ({
-    // Query to refresh token
-    refreshToken: builder.query({
+    refreshToken: builder.query<{ accessToken: string; refreshToken: string }, void>({
       query: () => ({
         url: "refresh",
         method: "GET",
-        credentials: "include", // Ensure cookies are included in the request
-      }),
-    }),
-    // Query to load user data based on tokens
-    loadUser: builder.query({
-      query: () => ({
-        url: "me",
-        method: "GET",
-        credentials: "include", // Include cookies for authentication
+        credentials: "include",
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
-          // Await the result of the query
-          const result = await queryFulfilled;
+          const { data } = await queryFulfilled;
 
-          // Dispatch userLoggedIn action to save tokens and user info in state
+          // Update tokens in state and cookies
+          Cookies.set("accessToken", data.accessToken);
+          Cookies.set("refreshToken", data.refreshToken);
+
           dispatch(
             userLoggedIn({
-              accessToken: result.data.accessToken, // Make sure these match your backend response structure
-              refreshToken: result.data.refreshToken,
-              user: result.data.user,
+              accessToken: data.accessToken,
+              refreshToken: data.refreshToken,
+              user: {}, // Optionally add user data if returned
+            })
+          );
+        } catch (error: any) {
+          console.error("Error refreshing token:", error);
+        }
+      },
+    }),
+    loadUser: builder.query<LoadUserResponse, void>({
+      query: () => ({
+        url: "me",
+        method: "GET",
+        credentials: "include",
+      }),
+      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
+        try {
+          const { data } = await queryFulfilled;
+
+          // Dispatch to save tokens and user information in state
+          dispatch(
+            userLoggedIn({
+              accessToken: data.accessToken,
+              refreshToken: data.refreshToken,
+              user: data.user,
             })
           );
         } catch (error: any) {
           console.error("Error loading user:", error);
-
-          // Handle specific errors such as token expiration or invalid request
-          if (error?.status === 401) {
-            console.log("Unauthorized: Access token is invalid or expired.");
-          } else if (error?.status === 400) {
-            console.log("Bad Request: Ensure the request is well-formed.");
-          }
         }
       },
     }),
   }),
 });
 
-// Export hooks for the queries
 export const { useRefreshTokenQuery, useLoadUserQuery } = apiSlice;
