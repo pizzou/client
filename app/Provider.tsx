@@ -19,7 +19,7 @@ export function Providers({ children }: ProvidersProps) {
 }
 
 export const Custom: FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isLoading } = useLoadUserQuery();
+  const { isLoading } = useLoadUserQuery({});
   const [isMounted, setisMounted] = useState(false);
 
   useEffect(() => {
