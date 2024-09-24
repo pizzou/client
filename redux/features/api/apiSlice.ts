@@ -2,21 +2,18 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { userLoggedIn } from "../auth/authSlice";
 import Cookies from "js-cookie";
 
-interface LoadUserResponse {
-  accessToken: string;
-  refreshToken: string;
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    // Add other user fields as needed
-  };
+// Define your user type based on the expected shape of the user data
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  // Add other user properties here as needed
 }
 
 export const apiSlice = createApi({
   reducerPath: "api",
   baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_SERVER_URI,
+    baseUrl: process.env.NEXT_PUBLIC_SERVER_URI, // Ensure this is correct
     prepareHeaders: (headers) => {
       const accessToken = Cookies.get("accessToken");
       const refreshToken = Cookies.get("refreshToken");
@@ -32,55 +29,42 @@ export const apiSlice = createApi({
 
       return headers;
     },
-    credentials: "include", // Include credentials (cookies) in cross-origin requests
+    credentials: "include", // Ensure cross-origin requests include credentials
   }),
   endpoints: (builder) => ({
-    refreshToken: builder.query<{ accessToken: string; refreshToken: string }, void>({
+    refreshToken: builder.query({
       query: () => ({
         url: "refresh",
         method: "GET",
-        credentials: "include",
+        credentials: "include", // Ensures cookies are included in the request
       }),
-      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
-        try {
-          const { data } = await queryFulfilled;
-
-          // Update tokens in state and cookies
-          Cookies.set("accessToken", data.accessToken);
-          Cookies.set("refreshToken", data.refreshToken);
-
-          dispatch(
-            userLoggedIn({
-              accessToken: data.accessToken,
-              refreshToken: data.refreshToken,
-              user: {}, // Optionally add user data if returned
-            })
-          );
-        } catch (error: any) {
-          console.error("Error refreshing token:", error);
-        }
-      },
     }),
-    loadUser: builder.query<LoadUserResponse, void>({
+    loadUser: builder.query({
       query: () => ({
         url: "me",
         method: "GET",
-        credentials: "include",
+        credentials: "include", // Ensures cookies are included in the request
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
-          const { data } = await queryFulfilled;
+          const result = await queryFulfilled;
+          const { data } = result;
 
-          // Dispatch to save tokens and user information in state
+          // Assuming data contains user details, you can structure it accordingly
           dispatch(
             userLoggedIn({
               accessToken: data.accessToken,
               refreshToken: data.refreshToken,
-              user: data.user,
+              user: {
+                id: data.user.id,
+                name: data.user.name,
+                email: data.user.email,
+                // Other user properties
+              }, // Adjust the shape of the user object as needed
             })
           );
         } catch (error: any) {
-          console.error("Error loading user:", error);
+          console.error(error);
         }
       },
     }),
