@@ -1,5 +1,5 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { userLoggedIn } from "../auth/authSlice";
+import { userLoggedIn, userLoggedOut } from "../auth/authSlice";
 import Cookies from "js-cookie";
 
 // Function to handle token refresh
@@ -16,6 +16,7 @@ const refreshAccessToken = async () => {
       },
       credentials: "include",
     });
+
     if (response.ok) {
       const data = await response.json();
       Cookies.set("accessToken", data.accessToken);
@@ -29,50 +30,57 @@ const refreshAccessToken = async () => {
 
 export const apiSlice = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({
-    baseUrl: process.env.NEXT_PUBLIC_SERVER_URI,
-    prepareHeaders: async (headers) => {
-      let accessToken = Cookies.get("accessToken");
+  baseQuery: async (args, api, extraOptions) => {
+    let result = await fetchBaseQuery({
+      baseUrl: process.env.NEXT_PUBLIC_SERVER_URI,
+      credentials: "include",
+      prepareHeaders: (headers) => {
+        let accessToken = Cookies.get("accessToken");
 
-      if (!accessToken) {
-        // Attempt to refresh token if accessToken is not present or expired
-        accessToken = await refreshAccessToken();
+        if (accessToken) {
+          headers.set("Authorization", `Bearer ${accessToken}`);
+        }
+        const refreshToken = Cookies.get("refreshToken");
+        if (refreshToken) {
+          headers.set("x-refresh-token", refreshToken);
+        }
+        headers.set("Content-Type", "application/json");
+
+        return headers;
+      },
+    })(args, api, extraOptions);
+
+    if (result.error && result.error.status === 401) {
+      // If access token is expired, attempt to refresh
+      const newAccessToken = await refreshAccessToken();
+
+      if (newAccessToken) {
+        result = await fetchBaseQuery({
+          baseUrl: process.env.NEXT_PUBLIC_SERVER_URI,
+          credentials: "include",
+          prepareHeaders: (headers) => {
+            headers.set("Authorization", `Bearer ${newAccessToken}`);
+            headers.set("Content-Type", "application/json");
+            return headers;
+          },
+        })(args, api, extraOptions);
+      } else {
+        // If refresh fails, log the user out
+        api.dispatch(userLoggedOut());
       }
+    }
 
-      if (accessToken) {
-        headers.set("Authorization", `Bearer ${accessToken}`);
-      }
-
-      const refreshToken = Cookies.get("refreshToken");
-      if (refreshToken) {
-        headers.set("x-refresh-token", refreshToken);
-      }
-
-      headers.set("Content-Type", "application/json");
-
-      return headers;
-    },
-    credentials: "include",
-  }),
+    return result;
+  },
   endpoints: (builder) => ({
-    refreshToken: builder.query({
-      query: () => ({
-        url: "refresh",
-        method: "GET",
-        credentials: "include",
-      }),
-    }),
     loadUser: builder.query({
       query: () => ({
         url: "me",
         method: "GET",
-        credentials: "include",
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const result = await queryFulfilled;
-
-          // Dispatch to save tokens and user information in state
           dispatch(
             userLoggedIn({
               accessToken: result.data.accessToken,
@@ -88,4 +96,4 @@ export const apiSlice = createApi({
   }),
 });
 
-export const { useRefreshTokenQuery, useLoadUserQuery } = apiSlice;
+export const { useLoadUserQuery } = apiSlice;
