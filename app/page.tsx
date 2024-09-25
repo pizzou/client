@@ -13,11 +13,11 @@ const Page: FC<Props> = (props) => {
   const [route, setRoute] = useState("Login");
   const { user } = useSelector((state: any) => state.auth);
 
-  useEffect(() => {
-    if (user) {
-      redirect("/admin");
-    }
-  }, [user]);
+  // useEffect(() => {
+  //   if (user) {
+  //     redirect("/admin");
+  //   }
+  // }, [user]);
   
   return (
     <div>
