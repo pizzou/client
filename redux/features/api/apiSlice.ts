@@ -9,10 +9,7 @@ export const apiSlice = createApi({
     prepareHeaders: (headers) => {
       const accessToken = Cookies.get("accessToken");
       const refreshToken = Cookies.get("refreshToken");
-    
-      console.log("Access Token:", accessToken); // Log the access token
-      console.log("Refresh Token:", refreshToken); // Log the refresh token
-    
+
       if (accessToken) {
         headers.set("access-token", accessToken);
       }
@@ -21,25 +18,23 @@ export const apiSlice = createApi({
       }
       return headers;
     },
-    
   }),
   endpoints: (builder) => ({
     refreshToken: builder.query({
-      query: (data) => ({
+      query: () => ({
         url: "refresh",
-        method: "GET",
-        credentials: "include" as const,
-      }),
-    }),
-    loadUser: builder.query({
-      query: (data) => ({
-        url: "me",
         method: "GET",
         credentials: "include" as const,
       }),
       async onQueryStarted(arg, { queryFulfilled, dispatch }) {
         try {
           const result = await queryFulfilled;
+          
+          // Set the tokens as cookies
+          Cookies.set('accessToken', result.data.accessToken, { sameSite: 'None', secure: true });
+          Cookies.set('refreshToken', result.data.refreshToken, { sameSite: 'None', secure: true });
+
+          // Dispatch the userLoggedIn action to store tokens and user in state
           dispatch(
             userLoggedIn({
               accessToken: result.data.accessToken,
@@ -47,8 +42,35 @@ export const apiSlice = createApi({
               user: result.data.user,
             })
           );
-        } catch (error: any) {
-          console.log(error);
+        } catch (error) {
+          console.error("Error refreshing token:", error);
+        }
+      },
+    }),
+    loadUser: builder.query({
+      query: () => ({
+        url: "me",
+        method: "GET",
+        credentials: "include" as const,
+      }),
+      async onQueryStarted(arg, { queryFulfilled, dispatch }) {
+        try {
+          const result = await queryFulfilled;
+          
+          // Set the tokens as cookies
+          Cookies.set('accessToken', result.data.accessToken, { sameSite: 'None', secure: true });
+          Cookies.set('refreshToken', result.data.refreshToken, { sameSite: 'None', secure: true });
+
+          // Dispatch the userLoggedIn action
+          dispatch(
+            userLoggedIn({
+              accessToken: result.data.accessToken,
+              refreshToken: result.data.refreshToken,
+              user: result.data.user,
+            })
+          );
+        } catch (error) {
+          console.error("Error loading user:", error);
         }
       },
     }),
