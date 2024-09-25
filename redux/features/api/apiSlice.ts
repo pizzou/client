@@ -9,7 +9,10 @@ export const apiSlice = createApi({
     prepareHeaders: (headers) => {
       const accessToken = Cookies.get("accessToken");
       const refreshToken = Cookies.get("refreshToken");
-
+    
+      console.log("Access Token:", accessToken); // Log the access token
+      console.log("Refresh Token:", refreshToken); // Log the refresh token
+    
       if (accessToken) {
         headers.set("access-token", accessToken);
       }
@@ -18,6 +21,7 @@ export const apiSlice = createApi({
       }
       return headers;
     },
+    
   }),
   endpoints: (builder) => ({
     refreshToken: builder.query({
